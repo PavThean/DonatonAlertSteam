@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="/socket.io/socket.io.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:transparent; overflow:hidden; display:flex; align-items:center; justify-content:center; min-height:100vh; font-family:'Outfit',sans-serif; padding:10px; }
+
+#widget {
+  width:500px; border-radius:14px; padding:18px 22px;
+  transition: background .3s, border-color .3s, box-shadow .3s;
+}
+#widget.styled {
+  background:linear-gradient(145deg,#0c0c1e,#161628);
+  border:1.5px solid rgba(139,92,246,0.4);
+  box-shadow:0 0 40px rgba(139,92,246,0.15), 0 10px 40px rgba(0,0,0,0.5);
+}
+#widget.transparent-mode {
+  background:transparent !important;
+  border:none !important;
+  box-shadow:none !important;
+}
+
+.top-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.goal-icon-name { display:flex; align-items:center; gap:9px; }
+.goal-icon { font-size:20px; }
+.goal-name { font-size:16px; font-weight:800; color:#e2e2f0; }
+.goal-name.shadow { text-shadow:0 2px 10px rgba(0,0,0,0.8); }
+.goal-pct  { font-size:15px; font-weight:800; }
+.goal-pct.shadow { text-shadow:0 2px 10px rgba(0,0,0,0.8); }
+
+.bar-track { height:14px; background:rgba(255,255,255,0.07); border-radius:7px; overflow:hidden; margin-bottom:10px; position:relative; }
+.bar-track.shadow-bg { background:rgba(0,0,0,0.3); }
+.bar-fill  { height:100%; border-radius:7px; transition:width 1.2s cubic-bezier(0.22,1,0.36,1); position:relative; min-width:0; }
+.bar-fill::after { content:''; position:absolute; top:0; right:0; bottom:0; width:40px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.25)); border-radius:0 7px 7px 0; }
+
+.amounts { display:flex; justify-content:space-between; align-items:baseline; }
+.raised-val { font-size:22px; font-weight:800; }
+.raised-val.shadow { text-shadow:0 2px 10px rgba(0,0,0,0.8); }
+.target-val { font-size:13px; color:rgba(255,255,255,0.4); }
+.target-val.shadow { color:rgba(255,255,255,0.7); text-shadow:0 1px 8px rgba(0,0,0,0.8); }
+#no-goal { color:rgba(255,255,255,0.3); font-size:13px; text-align:center; padding:10px 0; display:none; }
+</style>
+</head>
+<body>
+<div id="widget" class="styled">
+  <div id="no-goal">No active goal</div>
+  <div id="goal-content">
+    <div class="top-row">
+      <div class="goal-icon-name">
+        <span class="goal-icon" id="g-icon">🎯</span>
+        <span class="goal-name" id="g-name">Loading...</span>
+      </div>
+      <span class="goal-pct" id="g-pct">0%</span>
+    </div>
+    <div class="bar-track" id="g-track">
+      <div class="bar-fill" id="g-bar" style="width:0%"></div>
+    </div>
+    <div class="amounts">
+      <span class="raised-val" id="g-raised">$0.00</span>
+      <span class="target-val" id="g-target">of $0.00</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const socket = io();
+let config = {}, goals = [];
+
+async function init() {
+  config = await fetch('/api/goal-config').then(r=>r.json());
+  goals  = await fetch('/api/goals').then(r=>r.json());
+  applyConfig(); render();
+}
+init();
+
+socket.on('goals_updated',       g=>{ goals=g; render(); });
+socket.on('goal_config_updated', c=>{ config=c; applyConfig(); render(); });
+socket.on('donation', ()=>{ fetch('/api/goals').then(r=>r.json()).then(g=>{goals=g;render();}); });
+
+function applyConfig() {
+  const w   = document.getElementById('widget');
+  const c   = config.accentColor || '#8b5cf6';
+  const trp = config.transparent;
+
+  w.className = trp ? 'transparent-mode' : 'styled';
+  if (!trp) {
+    w.style.borderColor = c + '66';
+    w.style.boxShadow   = `0 0 40px ${c}25, 0 10px 40px rgba(0,0,0,0.5)`;
+  }
+  document.getElementById('g-pct').style.color    = c;
+  document.getElementById('g-raised').style.color = c;
+  document.getElementById('g-bar').style.background = `linear-gradient(90deg,${c},${c}cc)`;
+
+  // Add shadow class when transparent for readability
+  ['g-name','g-pct','g-raised'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.classList.toggle('shadow', !!trp);
+  });
+  document.getElementById('g-target').classList.toggle('shadow', !!trp);
+  document.getElementById('g-track').classList.toggle('shadow-bg', !!trp);
+}
+
+function render() {
+  const goal = goals.find(g=>g.id===config.goalId) || goals[0];
+  if (!goal) {
+    document.getElementById('no-goal').style.display='block';
+    document.getElementById('goal-content').style.display='none';
+    return;
+  }
+  document.getElementById('no-goal').style.display='none';
+  document.getElementById('goal-content').style.display='block';
+
+  const raised = parseFloat(goal.raised||0);
+  const target = parseFloat(goal.target||1);
+  const pct    = Math.min(100,(raised/target*100)).toFixed(1);
+
+  if (config.showLabel!==false) {
+    document.getElementById('g-icon').textContent = goal.emoji||'🎯';
+    document.getElementById('g-name').textContent = goal.name||'Goal';
+    document.getElementById('g-name').parentElement.parentElement.style.display='';
+  } else {
+    document.getElementById('g-name').parentElement.parentElement.style.display='none';
+  }
+
+  document.getElementById('g-pct').textContent    = config.showPercent!==false ? pct+'%' : '';
+  document.getElementById('g-bar').style.width    = pct+'%';
+  document.getElementById('g-raised').textContent = '$'+raised.toFixed(2);
+  document.getElementById('g-target').textContent = 'of $'+target.toFixed(2);
+}
+</script>
+</body>
+</html>

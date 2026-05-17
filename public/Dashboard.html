@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PavThean Creator</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="/socket.io/socket.io.js"></script>
+<style>
+:root{--bg:#080810;--surface:#0f0f1a;--card:#13131f;--border:rgba(255,255,255,.06);--b2:rgba(255,255,255,.11);--accent:#8b5cf6;--gold:#f59e0b;--teal:#2dd4bf;--red:#ef4444;--green:#22c55e;--text:#e2e2f0;--t2:#9090b0;--t3:#55556a;--r:12px;--sw:230px;}
+*{margin:0;padding:0;box-sizing:border-box;}html,body{height:100%;}
+body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;display:flex;height:100vh;overflow:hidden;}
+
+/* SIDEBAR */
+.sb{width:var(--sw);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;}
+.sb-brand{padding:16px 16px 14px;border-bottom:1px solid var(--border);}
+.sb-av{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--teal));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;margin-bottom:8px;}
+.sb-name{font-size:13px;font-weight:700;}.sb-sub{font-size:10px;color:var(--t3);margin-top:1px;}
+.sb-sec{padding:12px 10px 4px;}
+.sb-lbl{font-size:9px;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;padding:0 6px;margin-bottom:4px;}
+.sb-it{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;font-size:12px;color:var(--t2);cursor:pointer;transition:all .15s;margin-bottom:1px;user-select:none;}
+.sb-it:hover{background:rgba(255,255,255,.04);color:var(--text);}
+.sb-it.on{background:rgba(139,92,246,.14);color:var(--accent);font-weight:600;}
+.sb-it svg{width:14px;height:14px;flex-shrink:0;opacity:.8;}.sb-it.on svg{opacity:1;}
+.sb-foot{margin-top:auto;padding:12px 14px;border-top:1px solid var(--border);font-size:12px;}
+.sb-status{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:11px;color:var(--t3);}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--t3);}.dot.live{background:var(--green);box-shadow:0 0 6px var(--green);}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+.tb-l .bc{font-size:11px;color:var(--t3);}.tb-l .bc b{color:var(--t2);}
+.tb-l .pt{font-size:18px;font-weight:800;margin-top:2px;letter-spacing:-.3px;}
+.tb-r{display:flex;align-items:center;gap:8px;}
+.btn{padding:7px 13px;border-radius:8px;font-size:12px;font-family:'Outfit',sans-serif;font-weight:600;cursor:pointer;border:none;transition:all .15s;}
+.btn-g{background:transparent;border:1px solid var(--b2);color:var(--t2);}.btn-g:hover{color:var(--text);background:rgba(255,255,255,.04);}
+.btn-a{background:var(--accent);color:#fff;}.btn-a:hover{background:#7c3aed;}
+.btn-r{background:var(--red);color:#fff;}.btn-r:hover{background:#dc2626;}
+.btn-teal{background:var(--teal);color:#000;}.btn-teal:hover{filter:brightness(1.1);}
+select.sel{background:var(--card);border:1px solid var(--b2);color:var(--text);font-family:'Outfit',sans-serif;font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer;outline:none;}
+
+/* CONTENT */
+.content{flex:1;overflow-y:auto;padding:20px 24px;}
+.page{display:none;}.page.on{display:block;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px;}
+.ch{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;}
+.ct{font-size:14px;font-weight:700;}.cs{font-size:11px;color:var(--t3);margin-top:3px;}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:15px;position:relative;overflow:hidden;}
+.sg{position:absolute;top:-20px;right:-20px;width:70px;height:70px;border-radius:50%;filter:blur(25px);opacity:.5;}
+.si{font-size:10px;color:var(--t3);margin-bottom:8px;display:flex;align-items:center;gap:5px;}
+.sd{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.sv{font-size:24px;font-weight:800;letter-spacing:-.5px;line-height:1;}
+.sf{font-size:10px;color:var(--t3);margin-top:6px;}.up{color:var(--teal);}
+
+/* CHART */
+.row2{display:grid;grid-template-columns:1fr 280px;gap:14px;margin-bottom:16px;}
+.chart-svg{width:100%;height:130px;}
+.cbreak{display:flex;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+.cbi{flex:1;padding:0 12px;border-right:1px solid var(--border);}
+.cbi:first-child{padding-left:0;}.cbi:last-child{border-right:none;}
+.cbl{font-size:10px;color:var(--t3);margin-bottom:3px;}.cbv{font-size:15px;font-weight:800;}
+.ctabs{display:flex;gap:3px;background:var(--bg);padding:3px;border-radius:7px;}
+.ctab{padding:4px 10px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;color:var(--t3);transition:all .15s;}
+.ctab.on{background:var(--accent);color:#fff;}
+
+/* MINI GOALS */
+.gi{padding:11px 0;border-bottom:1px solid var(--border);}.gi:last-of-type{border-bottom:none;}
+.gr{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.gn{font-size:12px;font-weight:600;}.gp{font-size:11px;font-weight:700;}
+.gb{height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;}
+.gf{height:100%;border-radius:3px;transition:width .5s;}
+.gm{display:flex;justify-content:space-between;font-size:10px;color:var(--t3);margin-top:4px;}
+.add-btn{width:100%;margin-top:12px;padding:8px;border:1px dashed rgba(139,92,246,.3);border-radius:8px;background:transparent;color:var(--accent);font-size:12px;font-family:'Outfit',sans-serif;font-weight:600;cursor:pointer;}
+.add-btn:hover{background:rgba(139,92,246,.08);}
+
+/* TABLE */
+.tw{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:16px;}
+.th2{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(--border);}
+.search{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:8px;font-size:12px;font-family:'Outfit',sans-serif;width:180px;outline:none;}
+.search::placeholder{color:var(--t3);}
+table{width:100%;border-collapse:collapse;}
+th{padding:8px 16px;font-size:10px;color:var(--t3);text-align:left;letter-spacing:.5px;font-weight:600;border-bottom:1px solid var(--border);}
+td{padding:10px 16px;font-size:12px;border-bottom:1px solid rgba(255,255,255,.025);}
+tr:last-child td{border-bottom:none;}tr:hover td{background:rgba(255,255,255,.018);}
+.mono{font-family:'JetBrains Mono',monospace;font-size:11px;}
+.pill{display:inline-flex;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;}
+.pg{background:rgba(34,197,94,.15);color:var(--green);}.pt2{background:rgba(45,212,191,.15);color:var(--teal);}
+.vba{background:rgba(245,158,11,.12);color:var(--gold);display:inline-flex;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:600;}
+.vbk{background:rgba(45,212,191,.12);color:var(--teal);display:inline-flex;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:600;}
+.rmk-cell{font-size:11px;color:var(--t2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rmk-cell.has{color:var(--gold);}.dtt{font-size:11px;color:var(--t3);}
+.del-btn{background:transparent;border:none;color:var(--t3);cursor:pointer;padding:3px 6px;border-radius:5px;}
+.del-btn:hover{color:var(--red);background:rgba(239,68,68,.1);}
+
+/* TOP DONORS */
+.td-row{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid var(--border);}
+.td-row:last-child{border-bottom:none;}
+.td-rank{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;font-family:'JetBrains Mono',monospace;}
+.td-name{flex:1;font-size:13px;font-weight:600;}
+.td-bar-w{height:3px;background:rgba(255,255,255,.06);border-radius:2px;margin-top:3px;overflow:hidden;}.td-bar{height:100%;border-radius:2px;}
+.td-amt{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--gold);}
+.ptabs{display:flex;gap:4px;margin-bottom:14px;}
+.ptab{padding:5px 12px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);color:var(--t2);background:transparent;font-family:'Outfit',sans-serif;transition:all .15s;}
+.ptab:hover{color:var(--text);}.ptab.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+/* SETTINGS ROW */
+.sr{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--border);}
+.sr:last-child{border-bottom:none;}
+.srl{font-size:13px;font-weight:500;}.srd{font-size:11px;color:var(--t3);margin-top:2px;}
+.tog{width:38px;height:20px;border-radius:10px;background:rgba(255,255,255,.1);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;}
+.tog.on{background:var(--accent);}
+.tog::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:white;top:3px;left:3px;transition:left .2s;}
+.tog.on::after{left:21px;}
+.rng{-webkit-appearance:none;width:100px;height:3px;border-radius:2px;background:rgba(255,255,255,.1);outline:none;cursor:pointer;}
+.rng::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--accent);cursor:pointer;}
+.sw{width:22px;height:22px;border-radius:5px;cursor:pointer;border:2px solid transparent;transition:border-color .15s;flex-shrink:0;}
+.sw.on{border-color:white;}.swrow{display:flex;gap:5px;}
+
+/* ALERT CONFIG LAYOUT */
+.alert-cfg{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.cfg-col{display:flex;flex-direction:column;gap:14px;}
+
+/* PREVIEW BOX */
+.pvbox{background:linear-gradient(145deg,#0c0c20,#1a1030);border-radius:14px;padding:18px;position:relative;overflow:hidden;}
+.pvg1{position:absolute;top:-30px;right:-30px;width:100px;height:100px;border-radius:50%;filter:blur(50px);opacity:.22;}
+.pvg2{position:absolute;bottom:-20px;left:-20px;width:80px;height:80px;background:var(--accent);border-radius:50%;filter:blur(40px);opacity:.18;}
+.pvinner{border:1.5px solid rgba(245,158,11,.5);border-radius:12px;padding:14px;position:relative;z-index:1;text-align:center;}
+.pvl{font-size:10px;color:var(--gold);letter-spacing:2px;margin-bottom:6px;}
+.pvn{font-size:16px;font-weight:800;}.pva{font-size:28px;font-weight:800;color:var(--gold);line-height:1.1;}
+.pvr{font-size:11px;color:#bbb;background:rgba(255,255,255,.05);border-left:2px solid var(--gold);padding:5px 9px;border-radius:4px;margin-top:8px;text-align:left;}
+.pvb{font-size:10px;color:var(--t3);margin-top:8px;}
+
+/* MEDIA UPLOAD */
+.media-drop{border:2px dashed rgba(139,92,246,.3);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+.media-drop:hover{border-color:var(--accent);background:rgba(139,92,246,.05);}
+.media-drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.media-preview{border-radius:8px;overflow:hidden;margin-top:10px;text-align:center;}
+.media-preview img,.media-preview video{max-width:100%;max-height:140px;border-radius:8px;object-fit:contain;}
+
+/* GOALS FULL */
+.gg{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.gcf{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;}
+.gcft{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
+.gcfn{font-size:14px;font-weight:700;}.gcfd{font-size:10px;color:var(--t3);margin-top:3px;}
+.gcfb{height:7px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;margin-bottom:6px;}
+.gcff{height:100%;border-radius:4px;}
+.gcfns{display:flex;justify-content:space-between;font-size:12px;margin-bottom:12px;}
+.gcfr{font-weight:800;font-size:14px;}.gcfg{color:var(--t3);}
+.gcfbtns{display:flex;gap:6px;}
+.gcfbtn{flex:1;padding:6px;border-radius:7px;font-size:11px;font-family:'Outfit',sans-serif;font-weight:600;cursor:pointer;border:1px solid var(--b2);background:transparent;color:var(--t2);transition:all .15s;}
+.gcfbtn:hover{background:rgba(255,255,255,.04);color:var(--text);}
+.gcfbtn.del{color:var(--red);border-color:rgba(239,68,68,.25);}.gcfbtn.del:hover{background:rgba(239,68,68,.08);}
+
+/* WIDGET CARDS */
+.wg{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.wc{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;cursor:pointer;transition:all .15s;}
+.wc:hover{border-color:rgba(139,92,246,.35);transform:translateY(-2px);}
+.wi{font-size:20px;margin-bottom:9px;}.wn{font-size:13px;font-weight:700;margin-bottom:3px;}
+.wd{font-size:11px;color:var(--t3);line-height:1.5;}
+.wu{margin-top:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 9px;font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;cursor:pointer;transition:all .15s;word-break:break-all;}
+.wu:hover{border-color:var(--accent);color:var(--accent);}
+
+/* NEON */
+.nr{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:8px;}
+.nl{font-size:11px;color:var(--t3);margin-bottom:3px;}.nv{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t2);}
+.cpbtn{font-size:11px;color:var(--accent);cursor:pointer;font-weight:600;flex-shrink:0;}.cpbtn:hover{color:#a78bfa;}
+
+/* INPUT */
+.inp{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:7px 11px;border-radius:8px;font-size:12px;font-family:'Outfit',sans-serif;outline:none;width:100%;}
+.inp:focus{border-color:var(--accent);}
+.lbl2{font-size:11px;color:var(--t3);margin-bottom:4px;display:block;}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:100;}
+.modal-bg.on{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--b2);border-radius:14px;padding:22px;width:400px;max-width:90vw;}
+.modal-title{font-size:15px;font-weight:800;margin-bottom:14px;}
+.modal-foot{display:flex;gap:7px;margin-top:14px;justify-content:flex-end;}
+
+/* STEPS */
+.steps{display:flex;gap:8px;}
+.step{flex:1;background:var(--card);border:1px solid var(--border);border-radius:9px;padding:12px;text-align:center;}
+.stepn{font-size:18px;font-weight:800;color:var(--accent);font-family:'JetBrains Mono',monospace;}
+.stept{font-size:11px;color:var(--t3);margin-top:4px;line-height:1.5;}
+
+/* CFG GRID */
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+
+/* SECTION DIVIDER */
+.sdiv{font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+
+#toast{position:fixed;bottom:20px;right:20px;background:var(--teal);color:#000;font-weight:700;padding:8px 15px;border-radius:8px;font-size:12px;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;z-index:999;}
+#toast.on{opacity:1;transform:translateY(0);}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<aside class="sb">
+  <div class="sb-brand">
+    <div class="sb-av">PT</div>
+    <div class="sb-name">Pav Thean Creator</div>
+    <div class="sb-sub">Pav Thean</div>
+  </div>
+  <div class="sb-sec">
+    <div class="sb-lbl">Overview</div>
+    <div class="sb-it" onclick="go('donations')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>Donations</div>
+    <div class="sb-it" onclick="go('top')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>Top Donors</div>
+  </div>
+  <div class="sb-sec">
+    <div class="sb-lbl">Widgets</div>
+    <div class="sb-it" onclick="go('goals')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>Donation Goals</div>
+    <div class="sb-it" onclick="go('goalwidget')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="4" rx="2"/><rect x="3" y="10" width="14" height="4" rx="2"/><rect x="3" y="17" width="9" height="4" rx="2"/></svg>Goal Widget</div>
+    <div class="sb-it" onclick="go('topwidget')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Top Donor Widget</div>
+    <div class="sb-it" onclick="go('widgets')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>All OBS Widgets</div>
+  </div>
+  <div class="sb-sec">
+    <div class="sb-lbl">Settings</div>
+    <div class="sb-it" onclick="go('alertbox')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>AlertBox Settings</div>
+    <div class="sb-it" onclick="go('neon')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>OBS / PT Client</div>
+  </div>
+  <div class="sb-foot">
+    <div class="sb-status"><div class="dot" id="status-dot"></div><span id="status-txt">Connecting...</span></div>
+    <div style="font-weight:600">Powered by Pav Thean</div>
+    <div style="font-size:10px;color:var(--t3);margin-top:2px"></div>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="tb-l">
+      <div class="bc" id="bc">Dashboard / <b>Donations</b></div>
+      <div class="pt" id="pt">Donations Analytics</div>
+    </div>
+    <div class="tb-r" id="tb-r"></div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══ DONATIONS ══ -->
+    <div class="page on" id="page-donations">
+      <div class="stats">
+        <div class="stat"><div class="sg" style="background:var(--gold)"></div><div class="si"><div class="sd" style="background:var(--gold)"></div>Total USD</div><div class="sv" style="color:var(--gold)" id="stat-usd">$0.00</div><div class="sf" id="stat-usd-sub">0 transactions</div></div>
+        <div class="stat"><div class="sg" style="background:var(--teal)"></div><div class="si"><div class="sd" style="background:var(--teal)"></div>Total KHR</div><div class="sv" style="color:var(--teal)" id="stat-khr">0 ៛</div><div class="sf">This period</div></div>
+        <div class="stat"><div class="sg" style="background:var(--accent)"></div><div class="si"><div class="sd" style="background:var(--accent)"></div>Count</div><div class="sv" style="color:var(--accent)" id="stat-count">0</div><div class="sf">Donations</div></div>
+        <div class="stat"><div class="sg" style="background:var(--red)"></div><div class="si"><div class="sd" style="background:var(--red)"></div>Largest</div><div class="sv" id="stat-max">$0.00</div><div class="sf" id="stat-max-sub">—</div></div>
+      </div>
+      <div class="row2">
+        <div class="card">
+          <div class="ch">
+            <div><div class="ct">Earnings Overview</div><div class="cs">Visual breakdown</div></div>
+            <div class="ctabs"><div class="ctab on" onclick="switchTab(this)">USD</div><div class="ctab" onclick="switchTab(this)">KHR</div></div>
+          </div>
+          <svg class="chart-svg" viewBox="0 0 560 130" preserveAspectRatio="none">
+            <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.35"/><stop offset="100%" stop-color="#8b5cf6" stop-opacity="0"/></linearGradient></defs>
+            <line x1="0" y1="33" x2="560" y2="33" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <line x1="0" y1="66" x2="560" y2="66" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <line x1="0" y1="99" x2="560" y2="99" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <path id="chart-area" d="" fill="url(#cg)"/>
+            <path id="chart-line" d="" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="cbreak">
+            <div class="cbi"><div class="cbl">ABA PAY</div><div class="cbv" style="color:var(--gold)" id="cb-aba">$0.00</div></div>
+            <div class="cbi"><div class="cbl">BAKONG</div><div class="cbv" style="color:var(--teal)" id="cb-bk">$0.00</div></div>
+            <div class="cbi"><div class="cbl">Avg</div><div class="cbv" id="cb-avg">$0.00</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch">
+            <div><div class="ct">Donation Goals</div><div class="cs">Active goals</div></div>
+            <button class="btn btn-g" style="font-size:11px;padding:5px 9px" onclick="go('goals')">Manage</button>
+          </div>
+          <div id="mini-goals"><div style="color:var(--t3);font-size:12px;text-align:center;padding:16px 0">No goals yet</div></div>
+          <button class="add-btn" onclick="openGoalModal()">+ Add New Goal</button>
+        </div>
+      </div>
+      <div class="tw">
+        <div class="th2">
+          <div><div class="ct">Donations <span style="color:var(--t3);font-weight:400;font-size:12px" id="don-count">(0)</span></div><div class="cs">Transaction history</div></div>
+          <div style="display:flex;gap:8px">
+            <select class="sel" id="period-sel" onchange="renderStats();renderDonations();renderChart()" style="font-size:11px;padding:5px 9px">
+              <option value="month">This Month</option><option value="lastmonth">Last Month</option><option value="all">All Time</option>
+            </select>
+            <input class="search" placeholder="🔍 Search..." oninput="filterTable(this.value)">
+          </div>
+        </div>
+        <table><thead><tr><th>ID</th><th>USERNAME</th><th>AMOUNT</th><th>CURRENCY</th><th>VIA</th><th>REMARK</th><th>DATE</th><th></th></tr></thead>
+        <tbody id="don-tbody"><tr><td colspan="8" style="text-align:center;color:var(--t3);padding:28px">No donations yet</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <!-- ══ TOP DONORS ══ -->
+    <div class="page" id="page-top">
+      <div style="display:grid;grid-template-columns:1fr 280px;gap:16px">
+        <div class="card">
+          <div class="ch"><div><div class="ct">🏆 Top Donors</div><div class="cs">Ranked by total USD</div></div></div>
+          <div class="ptabs">
+            <button class="ptab on" onclick="switchPeriod(this,'all')">All Time</button>
+            <button class="ptab" onclick="switchPeriod(this,'session')">Session</button>
+            <button class="ptab" onclick="switchPeriod(this,'weekly')">This Week</button>
+            <button class="ptab" onclick="switchPeriod(this,'monthly')">This Month</button>
+          </div>
+          <div id="top-list"><div style="color:var(--t3);font-size:12px">No donations yet</div></div>
+        </div>
+        <div class="card">
+          <div class="ct" style="margin-bottom:10px">OBS Widget URL</div>
+          <div class="nr"><div><div class="nl">Top Donors Widget</div><div class="nv">localhost:3000/top-widget.html</div></div><div class="cpbtn" onclick="cp('http://localhost:3000/top-widget.html')">Copy</div></div>
+          <button class="btn btn-g" style="width:100%;margin-top:8px" onclick="go('topwidget')">⚙️ Config Widget</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ GOALS ══ -->
+    <div class="page" id="page-goals">
+      <div class="gg" id="goals-grid">
+        <div class="gcf" style="border:1px dashed rgba(139,92,246,.25);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;min-height:150px" onclick="openGoalModal()">
+          <div style="font-size:26px;opacity:.3">+</div>
+          <div style="font-size:13px;color:var(--t3)">Create New Goal</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ALERT BOX SETTINGS ══ -->
+    <div class="page" id="page-alertbox">
+      <div class="alert-cfg">
+        <!-- LEFT COL -->
+        <div class="cfg-col">
+          <div class="card">
+            <div class="ct" style="margin-bottom:2px">Display</div>
+            <div class="cs" style="margin-bottom:12px">What to show in the alert</div>
+            <div class="sr"><div><div class="srl">Show Donor Name</div><div class="srd">Display payer's full name</div></div><div class="tog on" id="tog-name" onclick="toggleS(this,'showName')"></div></div>
+            <div class="sr"><div><div class="srl">Show Amount</div><div class="srd">Display USD amount</div></div><div class="tog on" id="tog-amt" onclick="toggleS(this,'showAmount')"></div></div>
+            <div class="sr"><div><div class="srl">Show Remark</div><div class="srd">Show donor message</div></div><div class="tog on" id="tog-rmk" onclick="toggleS(this,'showRemark')"></div></div>
+            <div class="sr"><div><div class="srl">Show Via (ABA/BAKONG)</div><div class="srd">Payment method label</div></div><div class="tog" id="tog-via" onclick="toggleS(this,'showVia')"></div></div>
+            <div class="sr">
+              <div><div class="srl">Alert Text / Label</div><div class="srd">Text shown above donor name</div></div>
+              <input class="inp" id="alert-text" value="🎉 បានបរិច្ចាគ!" style="width:160px" onchange="saveS('alertText',this.value)">
+            </div>
+          </div>
+
+          <!-- AI VOICE READER -->
+          <div class="card">
+            <div class="ct" style="margin-bottom:2px">🤖 AI Voice Reader</div>
+            <div class="cs" style="margin-bottom:12px">Use Claude AI to craft and read out donation announcements</div>
+            <div class="sr">
+              <div><div class="srl">Enable AI Voice</div><div class="srd">Speak donation info on each alert</div></div>
+              <div class="tog" id="tog-aivoice" onclick="toggleS(this,'aiVoice')"></div>
+            </div>
+            <div id="aivoice-opts" style="display:none">
+              <div class="sr">
+                <div><div class="srl">Voice Language</div><div class="srd">Browser TTS language/accent</div></div>
+                <select class="sel" id="aivoice-lang" style="font-size:11px;padding:5px 9px" onchange="saveS('aiVoiceLang',this.value)">
+                  <option value="en-US">English (US)</option>
+                  <option value="en-GB">English (UK)</option>
+                  <option value="km-KH">Khmer (KH)</option>
+                  <option value="zh-CN">Chinese</option>
+                  <option value="ja-JP">Japanese</option>
+                  <option value="ko-KR">Korean</option>
+                  <option value="th-TH">Thai</option>
+                </select>
+              </div>
+              <div class="sr">
+                <div><div class="srl">Speech Rate</div><div class="srd">Speed of AI voice (0.5–2×)</div></div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input type="range" class="rng" min="5" max="20" value="10" id="aivoice-rate-rng"
+                    oninput="document.getElementById('aivoice-rate-v').textContent=(this.value/10).toFixed(1)+'×';saveS('aiVoiceRate',this.value/10)">
+                  <span id="aivoice-rate-v" style="font-size:12px;color:var(--accent);min-width:34px">1.0×</span>
+                </div>
+              </div>
+              <div class="sr">
+                <div><div class="srl">Pitch</div><div class="srd">Voice pitch (0.5–2)</div></div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input type="range" class="rng" min="5" max="20" value="10" id="aivoice-pitch-rng"
+                    oninput="document.getElementById('aivoice-pitch-v').textContent=(this.value/10).toFixed(1);saveS('aiVoicePitch',this.value/10)">
+                  <span id="aivoice-pitch-v" style="font-size:12px;color:var(--accent);min-width:24px">1.0</span>
+                </div>
+              </div>
+              <div class="sdiv" style="margin-top:10px">Anthropic API Key</div>
+              <div style="margin-bottom:8px">
+                <input class="inp" id="aivoice-apikey" type="password" placeholder="sk-ant-api03-..." style="font-family:'JetBrains Mono',monospace;font-size:11px">
+              </div>
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-a" style="flex:1;font-size:11px" onclick="saveAiApiKey()">💾 Save API Key</button>
+                <button class="btn btn-g" style="flex:1;font-size:11px" onclick="testAiVoice()">🔊 Test AI Voice</button>
+              </div>
+              <div id="aivoice-status" style="font-size:11px;color:var(--t3);margin-top:8px;min-height:16px"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="ct" style="margin-bottom:2px">Style</div>
+            <div class="cs" style="margin-bottom:12px">Colors, transparency, position</div>
+            <div class="sr">
+              <div><div class="srl">Transparent Background</div><div class="srd">Hide box — show text only (use with media)</div></div>
+              <div class="tog" id="tog-trp" onclick="toggleS(this,'transparent')"></div>
+            </div>
+            <div class="sr">
+              <div><div class="srl">Alert Position</div></div>
+              <select class="sel" id="pos-sel" onchange="saveS('position',this.value)" style="font-size:11px;padding:5px 9px">
+                <option value="bottom-center">Bottom Center</option>
+                <option value="top-center">Top Center</option>
+                <option value="bottom-left">Bottom Left</option>
+                <option value="bottom-right">Bottom Right</option>
+                <option value="top-left">Top Left</option>
+                <option value="top-right">Top Right</option>
+              </select>
+            </div>
+            <div class="sr">
+              <div><div class="srl">Accent Color</div></div>
+              <div class="swrow" id="alert-colors">
+                <div class="sw on" style="background:#f59e0b" onclick="setAlertColor(this,'#f59e0b')"></div>
+                <div class="sw" style="background:#8b5cf6" onclick="setAlertColor(this,'#8b5cf6')"></div>
+                <div class="sw" style="background:#2dd4bf" onclick="setAlertColor(this,'#2dd4bf')"></div>
+                <div class="sw" style="background:#ef4444" onclick="setAlertColor(this,'#ef4444')"></div>
+                <div class="sw" style="background:#ec4899" onclick="setAlertColor(this,'#ec4899')"></div>
+                <div class="sw" style="background:#ffffff" onclick="setAlertColor(this,'#ffffff')"></div>
+              </div>
+            </div>
+            <div class="sr">
+              <div><div class="srl">Alert Duration</div></div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <input type="range" class="rng" min="3" max="20" value="6" id="dur-rng" oninput="document.getElementById('dur-v').textContent=this.value+'s';saveS('duration',+this.value)">
+                <span id="dur-v" style="font-size:12px;color:var(--accent);min-width:28px">6s</span>
+              </div>
+            </div>
+            <div class="sr">
+              <div><div class="srl">Minimum Amount (USD)</div><div class="srd">Skip donations below this</div></div>
+              <input type="number" class="inp" id="min-amt" value="0.01" step="0.01" style="width:70px" onchange="saveS('minAmount',+this.value)">
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="ct" style="margin-bottom:2px">Sound</div>
+            <div class="cs" style="margin-bottom:12px">Alert notification sound</div>
+            <div class="sr"><div><div class="srl">Play Sound</div></div><div class="tog on" id="tog-snd" onclick="toggleS(this,'playSound')"></div></div>
+            <div class="sr">
+              <div><div class="srl">Use Default Sound</div><div class="srd">Use built-in chime sound</div></div>
+              <div class="tog on" id="tog-defsnd" onclick="toggleS(this,'useDefaultSound')"></div>
+            </div>
+            <div class="sr">
+              <div><div class="srl">Volume</div><div class="srd">Sound gain level (0–100%)</div></div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:12px">🔈</span>
+                <input type="range" class="rng" min="0" max="100" value="100" id="vol-rng"
+                  oninput="document.getElementById('vol-v').textContent=this.value+'%';saveS('soundVolume',+this.value)">
+                <span style="font-size:12px">🔊</span>
+                <span id="vol-v" style="font-size:12px;color:var(--accent);min-width:36px">100%</span>
+              </div>
+            </div>
+            <div class="sdiv">Custom Sound (MP3/WAV/OGG)</div>
+            <div id="sound-area">
+              <div id="sound-upload-btn">
+                <div class="media-drop" style="padding:14px">
+                  <input type="file" accept="audio/*" onchange="uploadSound(this)">
+                  <div style="font-size:20px;margin-bottom:6px">🎵</div>
+                  <div style="font-size:12px;color:var(--t3)">Click to upload custom sound</div>
+                  <div style="font-size:10px;color:var(--t3);margin-top:3px">MP3, WAV, OGG — max 10MB</div>
+                </div>
+              </div>
+              <div id="sound-current" style="display:none;margin-top:8px">
+                <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px">
+                  <span style="font-size:12px;color:var(--teal)" id="sound-name">sound.mp3</span>
+                  <div style="display:flex;gap:8px">
+                    <button class="btn btn-g" style="font-size:11px;padding:4px 9px" onclick="testSound()">▶ Test</button>
+                    <button class="btn btn-r" style="font-size:11px;padding:4px 9px" onclick="removeSound()">Remove</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT COL -->
+        <div class="cfg-col">
+          <div class="card">
+            <div class="ct" style="margin-bottom:2px">Media (Image / GIF / Video)</div>
+            <div class="cs" style="margin-bottom:12px">Show image, GIF, or video in the alert</div>
+            <div id="media-upload-area">
+              <div class="media-drop" id="media-drop">
+                <input type="file" accept="image/*,video/*" onchange="uploadMedia(this)">
+                <div style="font-size:28px;margin-bottom:8px">🖼️</div>
+                <div style="font-size:13px;color:var(--text);font-weight:600">Drop image, GIF or video</div>
+                <div style="font-size:11px;color:var(--t3);margin-top:4px">PNG, JPG, GIF, WebP, MP4 — max 50MB</div>
+              </div>
+            </div>
+            <div id="media-current" style="display:none">
+              <div class="media-preview" id="media-preview-el"></div>
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <button class="btn btn-r" style="flex:1;font-size:11px" onclick="removeMedia()">🗑 Remove Media</button>
+              </div>
+            </div>
+            <div id="media-options" style="display:none;margin-top:12px">
+              <div class="sr">
+                <div><div class="srl">Media Position</div></div>
+                <select class="sel" id="media-pos" onchange="saveS('mediaPosition',this.value)" style="font-size:11px;padding:5px 9px">
+                  <option value="top">Top</option>
+                  <option value="bottom">Bottom</option>
+                </select>
+              </div>
+              <div class="sr">
+                <div><div class="srl">Media Width (px)</div></div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input type="range" class="rng" min="80" max="420" value="200" id="media-w-rng" oninput="document.getElementById('media-w-v').textContent=this.value+'px';saveS('mediaWidth',+this.value)">
+                  <span id="media-w-v" style="font-size:12px;color:var(--accent);min-width:40px">200px</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PREVIEW -->
+          <div class="pvbox">
+            <div class="pvg1" id="pv-glow" style="background:#f59e0b"></div>
+            <div class="pvg2"></div>
+            <div style="font-size:10px;color:var(--t3);margin-bottom:10px;font-weight:600;position:relative;z-index:1">LIVE PREVIEW</div>
+            <div class="pvinner" id="pv-inner">
+              <div class="pvl" id="pv-lbl">🎉 បានបរិច្ចាគ!</div>
+              <div class="pvn">PAV SIVTHEAN</div>
+              <div class="pva" id="pv-amt">$5.00</div>
+              <div class="pvr">💬 pong kdor</div>
+              <div class="pvb">via ABA PAY</div>
+            </div>
+          </div>
+
+          <!-- TEST -->
+          <div class="card">
+            <div class="ct" style="margin-bottom:10px">🔔 Test Alert</div>
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+              <input class="inp" id="test-name" placeholder="Donor name" value="TEST DONOR">
+              <input class="inp" id="test-amt" placeholder="Amount" value="5.00" style="width:80px">
+            </div>
+            <input class="inp" id="test-rmk" placeholder="Remark (optional)" style="margin-bottom:10px">
+            <button class="btn btn-a" style="width:100%" onclick="sendTest()">Fire Test Alert →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ GOAL WIDGET ══ -->
+    <div class="page" id="page-goalwidget">
+      <div class="cfg-grid">
+        <div class="card">
+          <div class="ct" style="margin-bottom:2px">Goal Widget Config</div>
+          <div class="cs" style="margin-bottom:14px">Changes update OBS widget live</div>
+          <div class="sr">
+            <div><div class="srl">Which Goal to Display</div></div>
+            <select class="sel" id="gw-goal-sel" onchange="saveGC('goalId',this.value)" style="font-size:11px;padding:5px 9px;max-width:160px">
+              <option value="">First active goal</option>
+            </select>
+          </div>
+          <div class="sr"><div><div class="srl">Transparent Background</div><div class="srd">Removes box background</div></div><div class="tog" id="gw-tog-trp" onclick="this.classList.toggle('on');saveGC('transparent',this.classList.contains('on'))"></div></div>
+          <div class="sr"><div><div class="srl">Show Goal Label / Name</div></div><div class="tog on" id="gw-tog-lbl" onclick="this.classList.toggle('on');saveGC('showLabel',this.classList.contains('on'))"></div></div>
+          <div class="sr"><div><div class="srl">Show Percentage</div></div><div class="tog on" id="gw-tog-pct" onclick="this.classList.toggle('on');saveGC('showPercent',this.classList.contains('on'))"></div></div>
+          <div class="sr">
+            <div><div class="srl">Accent Color</div></div>
+            <div class="swrow">
+              <div class="sw on" style="background:#8b5cf6" onclick="setWColor(this,'#8b5cf6','goal')"></div>
+              <div class="sw" style="background:#f59e0b" onclick="setWColor(this,'#f59e0b','goal')"></div>
+              <div class="sw" style="background:#2dd4bf" onclick="setWColor(this,'#2dd4bf','goal')"></div>
+              <div class="sw" style="background:#ef4444" onclick="setWColor(this,'#ef4444','goal')"></div>
+              <div class="sw" style="background:#ec4899" onclick="setWColor(this,'#ec4899','goal')"></div>
+            </div>
+          </div>
+          <div style="margin-top:14px"><label class="lbl2">Quick Update Raised Amount</label>
+            <div style="display:flex;gap:8px">
+              <select class="sel" id="qg-sel" style="flex:1;font-size:11px"></select>
+              <input class="inp" type="number" id="qg-raised" placeholder="Raised $" step="0.01" style="width:90px">
+              <button class="btn btn-a" onclick="quickUpdateGoal()">Set</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ct" style="margin-bottom:10px">OBS URL</div>
+          <div class="nr"><div><div class="nl">Goal Widget</div><div class="nv">localhost:3000/goal-widget.html</div></div><div class="cpbtn" onclick="cp('http://localhost:3000/goal-widget.html')">Copy</div></div>
+          <div style="font-size:11px;color:var(--t3);margin-top:6px">Recommended OBS size: <b style="color:var(--t2)">520 × 120 px</b></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TOP WIDGET ══ -->
+    <div class="page" id="page-topwidget">
+      <div class="cfg-grid">
+        <div class="card">
+          <div class="ct" style="margin-bottom:2px">Top Donor Widget Config</div>
+          <div class="cs" style="margin-bottom:14px">Changes update OBS widget live</div>
+          <div class="sr"><div><div class="srl">Widget Title</div></div><input class="inp" id="tw-title" value="🏆 Top Donors" style="width:160px" onchange="saveTC('title',this.value)"></div>
+          <div class="sr">
+            <div><div class="srl">Period</div></div>
+            <select class="sel" id="tw-period" onchange="saveTC('period',this.value)" style="font-size:11px;padding:5px 9px">
+              <option value="all">All Time</option><option value="session">This Session</option><option value="weekly">This Week</option><option value="monthly">This Month</option>
+            </select>
+          </div>
+          <div class="sr">
+            <div><div class="srl">Number of Donors (1–10)</div></div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="range" class="rng" min="1" max="10" value="5" id="tw-limit" oninput="document.getElementById('tw-limit-v').textContent=this.value;saveTC('limit',+this.value)">
+              <span id="tw-limit-v" style="font-size:12px;color:var(--accent);min-width:20px">5</span>
+            </div>
+          </div>
+          <div class="sr"><div><div class="srl">Transparent Background</div><div class="srd">Removes box background</div></div><div class="tog" id="tw-tog-trp" onclick="this.classList.toggle('on');saveTC('transparent',this.classList.contains('on'))"></div></div>
+          <div class="sr"><div><div class="srl">Show Progress Bar</div><div class="srd">Mini bar under each donor name</div></div><div class="tog on" id="tw-tog-bar" onclick="this.classList.toggle('on');saveTC('showBar',this.classList.contains('on'))"></div></div>
+          <div class="sr">
+            <div><div class="srl">Accent Color</div></div>
+            <div class="swrow">
+              <div class="sw on" style="background:#f59e0b" onclick="setWColor(this,'#f59e0b','top')"></div>
+              <div class="sw" style="background:#8b5cf6" onclick="setWColor(this,'#8b5cf6','top')"></div>
+              <div class="sw" style="background:#2dd4bf" onclick="setWColor(this,'#2dd4bf','top')"></div>
+              <div class="sw" style="background:#ef4444" onclick="setWColor(this,'#ef4444','top')"></div>
+              <div class="sw" style="background:#ec4899" onclick="setWColor(this,'#ec4899','top')"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ct" style="margin-bottom:10px">OBS URL</div>
+          <div class="nr"><div><div class="nl">Top Donors Widget</div><div class="nv">localhost:3000/top-widget.html</div></div><div class="cpbtn" onclick="cp('http://localhost:3000/top-widget.html')">Copy</div></div>
+          <div style="font-size:11px;color:var(--t3);margin-top:6px">Recommended OBS size: <b style="color:var(--t2)">420 × 400 px</b></div>
+          <div style="margin-top:14px;font-size:12px;color:var(--t3);line-height:1.6">
+            <b style="color:var(--t2)">Rank numbers:</b> 1, 2, 3 instead of medals<br>
+            <b style="color:var(--t2)">Period:</b> Updates which donations count<br>
+            <b style="color:var(--t2)">Transparent:</b> OBS chroma key not needed
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ALL WIDGETS ══ -->
+    <div class="page" id="page-widgets">
+      <div class="wg">
+        <div class="wc"><div class="wi">🔔</div><div class="wn">Donation Alert</div><div class="wd">Popup with media, sound, name, amount, remark. 1920×1080.</div><div class="wu" onclick="cp('http://localhost:3000/alert.html')">alert.html — copy</div></div>
+        <div class="wc"><div class="wi">🎯</div><div class="wn">Goal Progress Bar</div><div class="wd">Animated bar for active donation goal. ~520×120px.</div><div class="wu" onclick="cp('http://localhost:3000/goal-widget.html')">goal-widget.html — copy</div></div>
+        <div class="wc"><div class="wi">🏆</div><div class="wn">Top Donors</div><div class="wd">Numbered leaderboard (1,2,3). Period filter. ~420×400px.</div><div class="wu" onclick="cp('http://localhost:3000/top-widget.html')">top-widget.html — copy</div></div>
+        <div class="wc"><div class="wi">📋</div><div class="wn">Recent Donations</div><div class="wd">Scrolling list of last 5 donations.</div><div class="wu" onclick="cp('http://localhost:3000/recent.html')">recent.html — copy</div></div>
+        <div class="wc"><div class="wi">⏱️</div><div class="wn">Donation Timer</div><div class="wd">Countdown resetting on each donation.</div><div class="wu" onclick="cp('http://localhost:3000/timer.html')">timer.html — copy</div></div>
+        <div class="wc"><div class="wi">💹</div><div class="wn">Total Counter</div><div class="wd">Live total donations counter this session.</div><div class="wu" onclick="cp('http://localhost:3000/total.html')">total.html — copy</div></div>
+      </div>
+    </div>
+
+    <!-- ══ NEON ══ -->
+    <div class="page" id="page-neon">
+      <div class="card" style="margin-bottom:14px">
+        <div class="ct" style="margin-bottom:14px">All OBS Browser Source URLs</div>
+        <div class="nr"><div><div class="nl">Alert Overlay (1920×1080)</div><div class="nv">http://localhost:3000/alert.html</div></div><div class="cpbtn" onclick="cp('http://localhost:3000/alert.html')">Copy</div></div>
+        <div class="nr"><div><div class="nl">Goal Widget (~520×120)</div><div class="nv">http://localhost:3000/goal-widget.html</div></div><div class="cpbtn" onclick="cp('http://localhost:3000/goal-widget.html')">Copy</div></div>
+        <div class="nr"><div><div class="nl">Top Donors Widget (~420×400)</div><div class="nv">http://localhost:3000/top-widget.html</div></div><div class="cpbtn" onclick="cp('http://localhost:3000/top-widget.html')">Copy</div></div>
+        <div class="nr"><div><div class="nl">Dashboard</div><div class="nv">http://localhost:3000/dashboard.html</div></div><div class="cpbtn" onclick="cp('http://localhost:3000/dashboard.html')">Copy</div></div>
+      </div>
+      <div class="card">
+        <div class="ct" style="margin-bottom:12px">Setup Guide</div>
+        <div class="steps">
+          <div class="step"><div class="stepn">01</div><div class="stept">Get <code>api_id</code>+<code>api_hash</code> from my.telegram.org</div></div>
+          <div class="step"><div class="stepn">02</div><div class="stept">Paste into telegram.config.json</div></div>
+          <div class="step"><div class="stepn">03</div><div class="stept">Run <code>Start.bat</code>, login phone+OTP</div></div>
+          <div class="step"><div class="stepn">04</div><div class="stept">Save session string into telegram.config.json/SESSION=</div></div>
+          <div class="step"><div class="stepn">05</div><div class="stept">Add URLs to OBS Browser Sources 🎉</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- GOAL MODAL -->
+<div class="modal-bg" id="goal-modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Create Goal</div>
+    <input type="hidden" id="modal-id">
+    <div class="frow">
+      <div><label class="lbl2">Goal Name</label><input class="inp" id="g-name" placeholder="New Gaming PC"></div>
+      <div><label class="lbl2">Emoji</label><input class="inp" id="g-emoji" placeholder="🎮" style="text-align:center"></div>
+    </div>
+    <div class="frow">
+      <div><label class="lbl2">Target (USD)</label><input class="inp" type="number" id="g-target" placeholder="50.00" step="0.01"></div>
+      <div><label class="lbl2">Raised (USD)</label><input class="inp" type="number" id="g-raised-inp" placeholder="0.00" step="0.01" value="0"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-g" onclick="closeGoalModal()">Cancel</button>
+      <button class="btn btn-a" onclick="saveGoal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast">✅ Done!</div>
+
+<script>
+const socket = io();
+let S={}, GC={}, TC={};
+let donations=[], goals=[], allDonations=[];
+let currentTopPeriod='all';
+
+socket.on('connect',    ()=>{ document.getElementById('status-dot').className='dot live'; document.getElementById('status-txt').textContent='Live'; });
+socket.on('disconnect', ()=>{ document.getElementById('status-dot').className='dot'; document.getElementById('status-txt').textContent='Offline'; });
+socket.on('donation', d=>{ allDonations.unshift(d); renderStats();renderDonations();renderChart();renderMiniGoals(); showToast('💰 $'+d.amount+' from '+d.donor); speakDonation(d.donor, d.amount, d.remark); });
+socket.on('goals_updated',      g=>{ goals=g; renderGoals();renderMiniGoals();popGoalSels(); });
+socket.on('donations_updated',  d=>{ allDonations=d; renderStats();renderDonations(); });
+socket.on('settings_updated',   s=>{ S=s; applySettingsUI(); });
+socket.on('goal_config_updated',c=>{ GC=c; applyGoalCfgUI(); });
+socket.on('top_config_updated', c=>{ TC=c; applyTopCfgUI(); });
+
+async function init() {
+  const data = await fetch('/api/data').then(r=>r.json());
+  S=data.alertSettings||{}; GC=data.goalConfig||{}; TC=data.topConfig||{};
+  goals=data.goals||[]; allDonations=data.donations||[];
+  applySettingsUI(); applyGoalCfgUI(); applyTopCfgUI();
+  renderStats(); renderDonations(); renderGoals(); renderMiniGoals(); renderChart();
+  renderTop('all'); popGoalSels();
+}
+init();
+
+// ── NAV ────────────────────────────────────────────────────
+const META={
+  donations:{bc:'Dashboard / <b>Donations</b>',pt:'Donations Analytics'},
+  top:{bc:'Dashboard / <b>Top Donors</b>',pt:'Top Donors'},
+  goals:{bc:'Dashboard / Widgets / <b>Goals</b>',pt:'Donation Goals'},
+  goalwidget:{bc:'Dashboard / Widgets / <b>Goal Widget</b>',pt:'Goal Widget Config'},
+  topwidget:{bc:'Dashboard / Widgets / <b>Top Donor Widget</b>',pt:'Top Donor Widget Config'},
+  widgets:{bc:'Dashboard / <b>All Widgets</b>',pt:'All Widgets & OBS URLs'},
+  alertbox:{bc:'Dashboard / Settings / <b>AlertBox</b>',pt:'AlertBox Settings'},
+  neon:{bc:'Dashboard / <b>OBS Client</b>',pt:'OBS / Neon Client'},
+};
+function go(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.sb-it').forEach(i=>i.classList.remove('on'));
+  const pg=document.getElementById('page-'+id); if(pg) pg.classList.add('on');
+  const m=META[id]||{};
+  document.getElementById('bc').innerHTML=m.bc||'';
+  document.getElementById('pt').textContent=m.pt||'';
+  const tbr=document.getElementById('tb-r');
+  if(id==='goals') tbr.innerHTML=`<button class="btn btn-a" onclick="openGoalModal()">+ Create Goal</button>`;
+  else if(id==='alertbox') tbr.innerHTML=`<button class="btn btn-g" onclick="resetSettings()">Reset Default</button>`;
+  else tbr.innerHTML='';
+  document.querySelectorAll('.sb-it').forEach(el=>{ if((el.getAttribute('onclick')||'').includes("'"+id+"'")) el.classList.add('on'); });
+  if(id==='top') renderTop(currentTopPeriod);
+}
+
+// ── STATS & CHART ───────────────────────────────────────────
+function getPeriodDons(){
+  const now=new Date(), p=document.getElementById('period-sel')?.value||'month';
+  return allDonations.filter(d=>{
+    const dt=new Date(d.date);
+    if(p==='all') return true;
+    if(p==='month') return dt.getMonth()===now.getMonth()&&dt.getFullYear()===now.getFullYear();
+    if(p==='lastmonth'){const lm=new Date(now.getFullYear(),now.getMonth()-1,1);return dt.getMonth()===lm.getMonth()&&dt.getFullYear()===lm.getFullYear();}
+    return true;
+  });
+}
+function renderStats(){
+  const ds=getPeriodDons();
+  const usd=ds.filter(d=>d.currency==='USD').reduce((s,d)=>s+parseFloat(d.amount),0);
+  const khr=ds.filter(d=>d.currency==='KHR').reduce((s,d)=>s+parseFloat(d.amount),0);
+  const max=ds.reduce((m,d)=>d.currency==='USD'&&parseFloat(d.amount)>m.v?{v:parseFloat(d.amount),name:d.donor}:m,{v:0,name:'—'});
+  document.getElementById('stat-usd').textContent='$'+usd.toFixed(2);
+  document.getElementById('stat-khr').textContent=khr>0?khr.toLocaleString()+' ៛':'0 ៛';
+  document.getElementById('stat-count').textContent=ds.length;
+  document.getElementById('stat-max').textContent='$'+max.v.toFixed(2);
+  document.getElementById('stat-max-sub').textContent=max.name;
+  document.getElementById('stat-usd-sub').textContent=ds.length+' transactions';
+  const aba=ds.filter(d=>d.via==='ABA PAY'&&d.currency==='USD').reduce((s,d)=>s+parseFloat(d.amount),0);
+  const bk=ds.filter(d=>d.via==='BAKONG'&&d.currency==='USD').reduce((s,d)=>s+parseFloat(d.amount),0);
+  document.getElementById('cb-aba').textContent='$'+aba.toFixed(2);
+  document.getElementById('cb-bk').textContent='$'+bk.toFixed(2);
+  document.getElementById('cb-avg').textContent='$'+(ds.length?usd/ds.length:0).toFixed(2);
+}
+function renderChart(){
+  const ds=getPeriodDons().filter(d=>d.currency==='USD');
+  const byDay={};
+  ds.forEach(d=>{const day=new Date(d.date).getDate();byDay[day]=(byDay[day]||0)+parseFloat(d.amount);});
+  const vals=Array.from({length:31},(_,i)=>byDay[i+1]||0);
+  const max=Math.max(...vals,0.01);
+  const W=560,H=128,pad=10;
+  const pts=vals.map((v,i)=>[pad+i*(W-pad*2)/30,H-pad-(v/max)*(H-pad*2)]);
+  document.getElementById('chart-line').setAttribute('d',pts.map((p,i)=>i===0?`M${p[0]},${p[1]}`:`L${p[0]},${p[1]}`).join(' '));
+  document.getElementById('chart-area').setAttribute('d',`M${pts[0][0]},${H} `+pts.map(p=>`L${p[0]},${p[1]}`).join(' ')+` L${pts[pts.length-1][0]},${H} Z`);
+}
+
+// ── DONATIONS TABLE ─────────────────────────────────────────
+function renderDonations(){
+  donations=getPeriodDons();
+  document.getElementById('don-count').textContent='('+donations.length+')';
+  renderTable(donations);
+}
+function renderTable(ds){
+  const tb=document.getElementById('don-tbody');
+  if(!ds.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:28px">No donations yet</td></tr>';return;}
+  tb.innerHTML=ds.slice(0,100).map((d,i)=>`<tr>
+    <td class="mono" style="color:var(--t3)">#${String(ds.length-i).padStart(3,'0')}</td>
+    <td style="font-weight:600">${d.donor}</td>
+    <td style="font-weight:800;color:${d.via==='BAKONG'?'var(--teal)':'var(--gold)'}">$${parseFloat(d.amount).toFixed(2)}</td>
+    <td><span class="pill ${d.currency==='KHR'?'pt2':'pg'}">${d.currency}</span></td>
+    <td><span class="${d.via==='BAKONG'?'vbk':'vba'}">${d.via||'ABA PAY'}</span></td>
+    <td class="rmk-cell ${d.remark?'has':''}">${d.remark?'💬 '+d.remark:'—'}</td>
+    <td class="dtt">${fmtDate(d.date)}</td>
+    <td><button class="del-btn" onclick="delDon('${d.id}')">✕</button></td>
+  </tr>`).join('');
+}
+function filterTable(q){renderTable(donations.filter(d=>d.donor.toLowerCase().includes(q.toLowerCase())));}
+async function delDon(id){await fetch('/api/donations/'+id,{method:'DELETE'});allDonations=allDonations.filter(d=>d.id!==id);renderDonations();renderStats();}
+
+// ── TOP DONORS ──────────────────────────────────────────────
+function switchPeriod(el,p){document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('on'));el.classList.add('on');currentTopPeriod=p;renderTop(p);}
+async function renderTop(period){
+  const top=await fetch('/api/top?period='+period+'&limit=10').then(r=>r.json());
+  const el=document.getElementById('top-list');
+  if(!top.length){el.innerHTML='<div style="color:var(--t3);font-size:12px">No donations yet</div>';return;}
+  const max=top[0].total;
+  el.innerHTML=top.map((d,i)=>{
+    const pct=max>0?(d.total/max*100).toFixed(0):0;
+    const rc=i===0?'rgba(255,215,0,0.15)':i===1?'rgba(192,192,192,0.12)':i===2?'rgba(205,127,50,0.12)':'rgba(255,255,255,0.05)';
+    const fc=i===0?'#ffd700':i===1?'#c0c0c0':i===2?'#cd7c2f':'rgba(255,255,255,0.4)';
+    return `<div class="td-row">
+      <div class="td-rank" style="background:${rc};color:${fc}">${i+1}</div>
+      <div style="flex:1"><div class="td-name">${d.name}</div><div class="td-bar-w"><div class="td-bar" style="width:${pct}%;background:linear-gradient(90deg,var(--gold),#fb923c)"></div></div></div>
+      <div class="td-amt">$${d.total.toFixed(2)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── GOALS ───────────────────────────────────────────────────
+function renderGoals(){
+  const grid=document.getElementById('goals-grid');
+  const colors=['linear-gradient(90deg,#8b5cf6,#a78bfa)','linear-gradient(90deg,#f59e0b,#fb923c)','linear-gradient(90deg,#2dd4bf,#6366f1)','linear-gradient(90deg,#ec4899,#8b5cf6)'];
+  const vcs=['#a78bfa','var(--gold)','var(--teal)','#ec4899'];
+  grid.innerHTML=goals.map((g,i)=>{
+    const pct=g.target>0?Math.min(100,(g.raised/g.target*100)).toFixed(0):0;
+    return `<div class="gcf"><div class="gcft"><div><div class="gcfn">${g.emoji||'🎯'} ${g.name}</div><div class="gcfd">${fmtDate(g.createdAt)}</div></div><span class="pill pg">Active</span></div>
+    <div class="gcfb"><div class="gcff" style="width:${pct}%;background:${colors[i%4]}"></div></div>
+    <div class="gcfns"><span class="gcfr" style="color:${vcs[i%4]}">$${parseFloat(g.raised||0).toFixed(2)} raised</span><span class="gcfg">of $${parseFloat(g.target||0).toFixed(2)} · ${pct}%</span></div>
+    <div class="gcfbtns"><button class="gcfbtn" onclick="editGoal('${g.id}')">✏️ Edit</button><button class="gcfbtn del" onclick="delGoal('${g.id}')">🗑</button></div></div>`;
+  }).join('')+`<div class="gcf" style="border:1px dashed rgba(139,92,246,.25);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;min-height:150px" onclick="openGoalModal()"><div style="font-size:26px;opacity:.3">+</div><div style="font-size:13px;color:var(--t3)">New Goal</div></div>`;
+}
+function renderMiniGoals(){
+  const el=document.getElementById('mini-goals');
+  if(!goals.length){el.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:14px 0">No goals yet</div>';return;}
+  const bgs=['linear-gradient(90deg,#8b5cf6,#a78bfa)','linear-gradient(90deg,#f59e0b,#fb923c)','linear-gradient(90deg,#2dd4bf,#6366f1)'];
+  const vcs=['#a78bfa','var(--gold)','var(--teal)'];
+  el.innerHTML=goals.slice(0,3).map((g,i)=>{
+    const pct=g.target>0?Math.min(100,(g.raised/g.target*100)).toFixed(0):0;
+    return `<div class="gi"><div class="gr"><div class="gn">${g.emoji||'🎯'} ${g.name}</div><div class="gp" style="color:${vcs[i%3]}">${pct}%</div></div>
+    <div class="gb"><div class="gf" style="width:${pct}%;background:${bgs[i%3]}"></div></div>
+    <div class="gm"><span>$${parseFloat(g.raised||0).toFixed(2)}</span><span>of $${parseFloat(g.target||0).toFixed(2)}</span></div></div>`;
+  }).join('');
+}
+function popGoalSels(){
+  const opts=goals.map(g=>`<option value="${g.id}">${g.emoji||'🎯'} ${g.name}</option>`).join('');
+  const gws=document.getElementById('gw-goal-sel');
+  const qgs=document.getElementById('qg-sel');
+  if(gws){gws.innerHTML='<option value="">First active goal</option>'+opts;if(GC.goalId)gws.value=GC.goalId;}
+  if(qgs) qgs.innerHTML='<option value="">Select goal...</option>'+opts;
+}
+function openGoalModal(){document.getElementById('modal-id').value='';document.getElementById('modal-title').textContent='Create Goal';document.getElementById('g-name').value='';document.getElementById('g-emoji').value='';document.getElementById('g-target').value='';document.getElementById('g-raised-inp').value='0';document.getElementById('goal-modal').classList.add('on');}
+function editGoal(id){const g=goals.find(x=>x.id===id);if(!g)return;document.getElementById('modal-id').value=id;document.getElementById('modal-title').textContent='Edit Goal';document.getElementById('g-name').value=g.name||'';document.getElementById('g-emoji').value=g.emoji||'';document.getElementById('g-target').value=g.target||'';document.getElementById('g-raised-inp').value=g.raised||0;document.getElementById('goal-modal').classList.add('on');}
+function closeGoalModal(){document.getElementById('goal-modal').classList.remove('on');}
+async function saveGoal(){
+  const id=document.getElementById('modal-id').value;
+  const body={name:document.getElementById('g-name').value,emoji:document.getElementById('g-emoji').value||'🎯',target:+document.getElementById('g-target').value,raised:+document.getElementById('g-raised-inp').value,currency:'USD'};
+  if(!body.name||!body.target){showToast('⚠️ Fill name and target!');return;}
+  if(id) await fetch('/api/goals/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  else   await fetch('/api/goals',    {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  closeGoalModal();goals=await fetch('/api/goals').then(r=>r.json());renderGoals();renderMiniGoals();popGoalSels();
+}
+async function delGoal(id){if(!confirm('Delete?'))return;await fetch('/api/goals/'+id,{method:'DELETE'});goals=goals.filter(g=>g.id!==id);renderGoals();renderMiniGoals();popGoalSels();}
+async function quickUpdateGoal(){
+  const id=document.getElementById('qg-sel').value, raised=+document.getElementById('qg-raised').value;
+  if(!id){showToast('⚠️ Select a goal!');return;}
+  await fetch('/api/goals/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({raised})});
+  showToast('✅ Goal updated!');
+}
+
+// ── ALERT SETTINGS ──────────────────────────────────────────
+function applySettingsUI(){
+  setTog('tog-name',S.showName);setTog('tog-amt',S.showAmount);setTog('tog-rmk',S.showRemark);
+  setTog('tog-via',S.showVia);setTog('tog-snd',S.playSound);setTog('tog-defsnd',S.useDefaultSound!==false);
+  const vol=S.soundVolume??100;const vr=document.getElementById('vol-rng');const vv=document.getElementById('vol-v');if(vr){vr.value=vol;vv.textContent=vol+'%';}
+  setTog('tog-trp',S.transparent);
+  const dur=S.duration||6;document.getElementById('dur-rng').value=dur;document.getElementById('dur-v').textContent=dur+'s';
+  document.getElementById('min-amt').value=S.minAmount||0.01;
+  const at=S.alertText||'🎉 បានបរិច្ចាគ!';document.getElementById('alert-text').value=at;
+  const pos=document.getElementById('pos-sel');if(pos)pos.value=S.position||'bottom-center';
+  const c=S.accentColor||'#f59e0b';
+  document.querySelectorAll('#alert-colors .sw').forEach(s=>s.classList.toggle('on',s.style.background===c));
+  document.getElementById('pv-glow').style.background=c;
+  document.getElementById('pv-inner').style.borderColor=c+'80';
+  document.getElementById('pv-lbl').style.color=c;
+  document.getElementById('pv-amt').style.color=c;
+
+  // AI Voice
+  setTog('tog-aivoice', S.aiVoice);
+  document.getElementById('aivoice-opts').style.display = S.aiVoice ? 'block' : 'none';
+  const alLang=document.getElementById('aivoice-lang');if(alLang&&S.aiVoiceLang)alLang.value=S.aiVoiceLang;
+  const rr=document.getElementById('aivoice-rate-rng');if(rr){const rv=Math.round((S.aiVoiceRate||1)*10);rr.value=rv;document.getElementById('aivoice-rate-v').textContent=(rv/10).toFixed(1)+'×';}
+  const pr=document.getElementById('aivoice-pitch-rng');if(pr){const pv=Math.round((S.aiVoicePitch||1)*10);pr.value=pv;document.getElementById('aivoice-pitch-v').textContent=(pv/10).toFixed(1);}
+
+  // Media
+  if(S.mediaFile){
+    document.getElementById('media-upload-area').style.display='none';
+    document.getElementById('media-current').style.display='block';
+    document.getElementById('media-options').style.display='block';
+    const mw=S.mediaWidth||200;
+    document.getElementById('media-w-rng').value=mw;document.getElementById('media-w-v').textContent=mw+'px';
+    const mpos=document.getElementById('media-pos');if(mpos)mpos.value=S.mediaPosition||'top';
+    const preview=document.getElementById('media-preview-el');
+    if(S.mediaType==='video') preview.innerHTML=`<video src="${S.mediaFile}" muted loop autoplay style="max-width:100%;max-height:140px;border-radius:8px"></video>`;
+    else preview.innerHTML=`<img src="${S.mediaFile}" style="max-width:100%;max-height:140px;border-radius:8px">`;
+  } else {
+    document.getElementById('media-upload-area').style.display='block';
+    document.getElementById('media-current').style.display='none';
+    document.getElementById('media-options').style.display='none';
+  }
+
+  // Sound
+  if(S.customSound){
+    document.getElementById('sound-current').style.display='block';
+    const name=S.customSound.split('/').pop();document.getElementById('sound-name').textContent=name;
+  } else {
+    document.getElementById('sound-current').style.display='none';
+  }
+}
+function setTog(id,val){const el=document.getElementById(id);if(el)el.classList.toggle('on',!!val);}
+function toggleS(el,key){
+  el.classList.toggle('on');
+  const val=el.classList.contains('on');
+  saveS(key,val);
+  // Show/hide AI voice options panel when toggled
+  if(key==='aiVoice'){document.getElementById('aivoice-opts').style.display=val?'block':'none';}
+}
+function saveS(key,val){S[key]=val;fetch('/api/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({[key]:val})});}
+
+// ── AI VOICE ─────────────────────────────────────────────────
+async function speakDonation(donor, amount, remark) {
+  if (!S.aiVoice) return;
+  const statusEl = document.getElementById('aivoice-status');
+  try {
+    const res = await fetch('/api/ai-speak', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ donor, amount, remark, lang: S.aiVoiceLang || 'en-US' })
+    });
+    const data = await res.json();
+    if (data.error) { if(statusEl) statusEl.textContent = '⚠️ ' + data.error; return; }
+    if (data.text) speakText(data.text);
+  } catch(e) {
+    // Fallback to simple TTS without AI
+    speakText(`${donor} donated $${amount}${remark ? '. ' + remark : ''}`);
+  }
+}
+function speakText(text) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang  = S.aiVoiceLang  || 'en-US';
+  utt.rate  = S.aiVoiceRate  || 1.0;
+  utt.pitch = S.aiVoicePitch || 1.0;
+  window.speechSynthesis.speak(utt);
+}
+async function saveAiApiKey() {
+  const key = document.getElementById('aivoice-apikey').value.trim();
+  const statusEl = document.getElementById('aivoice-status');
+  if (!key) { statusEl.textContent = '⚠️ Enter an API key first'; return; }
+  const res = await fetch('/api/settings', {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ anthropicApiKey: key })
+  });
+  if (res.ok) {
+    document.getElementById('aivoice-apikey').value = '';
+    document.getElementById('aivoice-apikey').placeholder = '✅ Key saved on server';
+    statusEl.style.color = 'var(--teal)';
+    statusEl.textContent = '✅ API key saved! Test the voice below.';
+    showToast('✅ Anthropic API key saved!');
+  } else {
+    statusEl.style.color = 'var(--red)';
+    statusEl.textContent = '❌ Failed to save key.';
+  }
+}
+async function testAiVoice() {
+  const statusEl = document.getElementById('aivoice-status');
+  statusEl.style.color = 'var(--t3)';
+  statusEl.textContent = '⏳ Generating AI announcement...';
+  try {
+    const testRemark = (S.aiVoiceLang||'en-US') === 'km-KH' ? 'សូមបន្តស្ត្រីម!' : 'Keep up the great stream!';
+    const res = await fetch('/api/ai-speak', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ donor: 'PAV THEAN', amount: '10.00', remark: testRemark, lang: S.aiVoiceLang || 'en-US' })
+    });
+    const data = await res.json();
+    if (data.error) {
+      statusEl.style.color = 'var(--red)';
+      statusEl.textContent = '❌ ' + data.error;
+      return;
+    }
+    statusEl.style.color = 'var(--teal)';
+    statusEl.textContent = '🔊 ' + data.text;
+    speakText(data.text);
+  } catch(e) {
+    statusEl.style.color = 'var(--red)';
+    statusEl.textContent = '❌ Error: ' + e.message;
+  }
+}
+function setAlertColor(el,c){
+  document.querySelectorAll('#alert-colors .sw').forEach(s=>s.classList.remove('on'));el.classList.add('on');
+  document.getElementById('pv-glow').style.background=c;
+  document.getElementById('pv-inner').style.borderColor=c+'80';
+  document.getElementById('pv-lbl').style.color=c;document.getElementById('pv-amt').style.color=c;
+  saveS('accentColor',c);
+}
+async function resetSettings(){
+  const def={showName:true,showAmount:true,showRemark:true,playSound:true,useDefaultSound:true,showVia:false,duration:6,accentColor:'#f59e0b',minAmount:0.01,transparent:false,alertText:'🎉 បានបរិច្ចាគ!',position:'bottom-center'};
+  await fetch('/api/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(def)});
+  S=def;applySettingsUI();showToast('Settings reset!');
+}
+async function sendTest(){
+  await fetch('/api/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({donor:document.getElementById('test-name').value||'TEST DONOR',amount:document.getElementById('test-amt').value||'5.00',remark:document.getElementById('test-rmk').value||null})});
+  showToast('🔔 Test fired!');
+}
+
+// ── MEDIA UPLOAD ─────────────────────────────────────────────
+async function uploadMedia(input){
+  if(!input.files[0]) return;
+  const fd=new FormData(); fd.append('media',input.files[0]);
+  showToast('📤 Uploading...');
+  const res=await fetch('/api/upload',{method:'POST',body:fd}).then(r=>r.json());
+  if(res.url){S.mediaFile=res.url;S.mediaType=res.type;applySettingsUI();showToast('✅ Media uploaded!');}
+  else showToast('❌ Upload failed');
+}
+async function removeMedia(){
+  await fetch('/api/upload',{method:'DELETE'});
+  S.mediaFile=null;S.mediaType=null;applySettingsUI();showToast('🗑 Media removed');
+}
+
+// ── SOUND UPLOAD ──────────────────────────────────────────────
+async function uploadSound(input){
+  if(!input.files[0]) return;
+  const fd=new FormData(); fd.append('sound',input.files[0]);
+  showToast('📤 Uploading sound...');
+  const res=await fetch('/api/upload-sound',{method:'POST',body:fd}).then(r=>r.json());
+  if(res.url){S.customSound=res.url;applySettingsUI();showToast('✅ Sound uploaded!');}
+  else showToast('❌ Upload failed');
+}
+async function removeSound(){
+  await fetch('/api/upload-sound',{method:'DELETE'});
+  S.customSound=null;applySettingsUI();showToast('🗑 Sound removed');
+}
+function testSound(){
+  const src=S.customSound||'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3';
+  try{const a=new Audio(src);a.volume=Math.min(1,Math.max(0,(S.soundVolume??100)/100));a.play();}catch(e){}
+}
+
+// ── GOAL WIDGET CFG ───────────────────────────────────────────
+function applyGoalCfgUI(){
+  setTog('gw-tog-trp',GC.transparent);setTog('gw-tog-lbl',GC.showLabel!==false);setTog('gw-tog-pct',GC.showPercent!==false);
+  const c=GC.accentColor||'#8b5cf6';
+  document.querySelectorAll('#page-goalwidget .swrow .sw').forEach(s=>s.classList.toggle('on',s.style.background===c));
+  const sel=document.getElementById('gw-goal-sel');if(sel&&GC.goalId)sel.value=GC.goalId;
+}
+function saveGC(key,val){GC[key]=val;fetch('/api/goal-config',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({[key]:val})});}
+function setWColor(el,c,type){
+  el.closest('.swrow').querySelectorAll('.sw').forEach(s=>s.classList.remove('on'));el.classList.add('on');
+  if(type==='goal') saveGC('accentColor',c);
+  if(type==='top')  saveTC('accentColor',c);
+}
+
+// ── TOP WIDGET CFG ─────────────────────────────────────────────
+function applyTopCfgUI(){
+  const ti=document.getElementById('tw-title');if(ti)ti.value=TC.title||'🏆 Top Donors';
+  const ps=document.getElementById('tw-period');if(ps)ps.value=TC.period||'all';
+  const lr=document.getElementById('tw-limit');if(lr){lr.value=TC.limit||5;document.getElementById('tw-limit-v').textContent=TC.limit||5;}
+  setTog('tw-tog-trp',TC.transparent);setTog('tw-tog-bar',TC.showBar!==false);
+  const c=TC.accentColor||'#f59e0b';
+  document.querySelectorAll('#page-topwidget .swrow .sw').forEach(s=>s.classList.toggle('on',s.style.background===c));
+}
+function saveTC(key,val){TC[key]=val;fetch('/api/top-config',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({[key]:val})});}
+
+// ── UTILS ──────────────────────────────────────────────────────
+function fmtDate(iso){if(!iso)return'—';const d=new Date(iso);return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+', '+d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});}
+function switchTab(el){el.closest('.ctabs').querySelectorAll('.ctab').forEach(t=>t.classList.remove('on'));el.classList.add('on');}
+function cp(txt){navigator.clipboard.writeText(txt).catch(()=>{});showToast('✅ Copied!');}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2500);}
+</script>
+</body>
+</html>

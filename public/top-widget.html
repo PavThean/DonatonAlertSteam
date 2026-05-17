@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
+<script src="/socket.io/socket.io.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:transparent; overflow:hidden; font-family:'Outfit',sans-serif; padding:10px; }
+
+#widget {
+  width:380px; border-radius:14px; padding:16px 18px;
+  transition: all .3s;
+}
+#widget.styled {
+  background:linear-gradient(145deg,#0c0c1e,#161628);
+  border:1.5px solid rgba(245,158,11,0.35);
+  box-shadow:0 0 40px rgba(245,158,11,0.12), 0 10px 40px rgba(0,0,0,0.5);
+}
+#widget.transparent-mode {
+  background:transparent !important;
+  border:none !important;
+  box-shadow:none !important;
+}
+
+.header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06);
+}
+#widget.transparent-mode .header { border-bottom-color:rgba(255,255,255,0.15); }
+.title { font-size:14px; font-weight:800; color:#e2e2f0; }
+.title.shadow { text-shadow:0 2px 10px rgba(0,0,0,0.9); }
+.period-lbl { font-size:10px; font-weight:700; padding:3px 9px; border-radius:20px; }
+
+.donor-row {
+  display:flex; align-items:center; gap:10px;
+  padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.04);
+  animation:rowIn .35s ease both;
+}
+#widget.transparent-mode .donor-row { border-bottom-color:rgba(255,255,255,0.1); }
+.donor-row:last-child { border-bottom:none; }
+@keyframes rowIn { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
+
+/* NUMBER RANK (1, 2, 3 not medals) */
+.rank {
+  width:30px; height:30px; border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; font-weight:800; flex-shrink:0;
+  font-family:'JetBrains Mono',monospace;
+}
+.rank-1 { background:rgba(255,215,0,0.18); color:#ffd700; }
+.rank-2 { background:rgba(192,192,192,0.14); color:#c0c0c0; }
+.rank-3 { background:rgba(205,127,50,0.14); color:#cd7c2f; }
+.rank-n { background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.45); font-size:12px; }
+
+.donor-info { flex:1; min-width:0; }
+.donor-name { font-size:13px; font-weight:700; color:#e2e2f0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.donor-name.shadow { text-shadow:0 1px 8px rgba(0,0,0,0.8); }
+.bar-wrap { height:3px; background:rgba(255,255,255,0.07); border-radius:2px; margin-top:4px; overflow:hidden; }
+#widget.transparent-mode .bar-wrap { background:rgba(0,0,0,0.3); }
+.bar-fill { height:100%; border-radius:2px; }
+
+.donor-amt { font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700; flex-shrink:0; }
+.donor-amt.shadow { text-shadow:0 1px 8px rgba(0,0,0,0.8); }
+
+.empty { color:rgba(255,255,255,0.25); font-size:12px; text-align:center; padding:16px 0; }
+</style>
+</head>
+<body>
+<div id="widget" class="styled">
+  <div class="header">
+    <div class="title" id="w-title">🏆 Top Donors</div>
+    <div class="period-lbl" id="w-period">All Time</div>
+  </div>
+  <div id="w-list"><div class="empty">No donations yet</div></div>
+</div>
+
+<script>
+const socket = io();
+let config = {}, topData = [];
+const PERIOD_LABELS = { all:'All Time', session:'This Session', weekly:'This Week', monthly:'This Month' };
+
+async function init() {
+  config  = await fetch('/api/top-config').then(r=>r.json());
+  await loadTop(); applyConfig();
+}
+init();
+
+socket.on('donation',           ()=>loadTop());
+socket.on('donations_updated',  ()=>loadTop());
+socket.on('top_config_updated', c=>{ config=c; applyConfig(); loadTop(); });
+
+async function loadTop() {
+  const p=config.period||'all', l=config.limit||5;
+  topData = await fetch(`/api/top?period=${p}&limit=${l}`).then(r=>r.json());
+  render();
+}
+
+function applyConfig() {
+  const w   = document.getElementById('widget');
+  const c   = config.accentColor || '#f59e0b';
+  const trp = config.transparent;
+
+  w.className = trp ? 'transparent-mode' : 'styled';
+  if (!trp) {
+    w.style.borderColor = c+'55';
+    w.style.boxShadow   = `0 0 40px ${c}20, 0 10px 40px rgba(0,0,0,0.5)`;
+  }
+
+  document.getElementById('w-title').textContent  = config.title||'🏆 Top Donors';
+  document.getElementById('w-period').textContent = PERIOD_LABELS[config.period]||'All Time';
+  document.getElementById('w-period').style.color      = c;
+  document.getElementById('w-period').style.background = c+'22';
+  document.getElementById('w-title').classList.toggle('shadow', !!trp);
+}
+
+function render() {
+  const list = document.getElementById('w-list');
+  const c    = config.accentColor || '#f59e0b';
+  const trp  = config.transparent;
+
+  if (!topData.length) { list.innerHTML='<div class="empty">No donations yet</div>'; return; }
+
+  const max = topData[0].total;
+
+  list.innerHTML = topData.map((d,i) => {
+    const pct    = max>0?(d.total/max*100).toFixed(0):0;
+    const rankCls = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-n';
+    const showBar = config.showBar !== false;
+    return `<div class="donor-row" style="animation-delay:${i*.06}s">
+      <div class="rank ${rankCls}">${i+1}</div>
+      <div class="donor-info">
+        <div class="donor-name${trp?' shadow':''}">${d.name}</div>
+        ${showBar?`<div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;background:linear-gradient(90deg,${c},${c}cc)"></div></div>`:''}
+      </div>
+      <div class="donor-amt${trp?' shadow':''}" style="color:${c}">$${d.total.toFixed(2)}</div>
+    </div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>
